@@ -1,6 +1,9 @@
 package com.example.notes;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -14,6 +17,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,7 +51,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        notes.add("Example note");
+
+        SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("com.example.notes", MODE_PRIVATE);
+
+        HashSet<String> set = (HashSet<String>) sharedPreferences.getStringSet("notes", null);
+
+        if(set == null) {
+            notes.add("Example note");
+        }else {
+            notes = new ArrayList(set);
+        }
 
         ListView listView = findViewById(R.id.listView);
         arrayAdapter= new ArrayAdapter(this, android.R.layout.simple_list_item_1, notes);
@@ -59,6 +72,35 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), editNotes.class);
                 intent.putExtra("noteId", position);
                 startActivity(intent);
+            }
+        });
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                final int itemToDelete = position;
+                new AlertDialog.Builder(MainActivity.this)
+                        .setIcon(android.R.drawable.ic_dialog_info)
+                        .setTitle("Are you sure?")
+                        .setMessage("Do you want to delete this note?")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                notes.remove(itemToDelete);
+                                arrayAdapter.notifyDataSetChanged();
+
+                                HashSet<String> set = new HashSet<String>(MainActivity.notes);
+                                SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("com.example.notes", MODE_PRIVATE);
+                                sharedPreferences.edit().putStringSet("notes", set).apply();
+                            }
+                        })
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                            }
+                        }).show();
+
+                return true;
             }
         });
 
